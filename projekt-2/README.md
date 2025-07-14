@@ -1,8 +1,4 @@
-# Algorytmy i Złożoność Obliczeniowa
-
-- Autor: Mateusz Głuchowski
-
-# [Zadanie projektowe nr 2](https://github.com/Ite-2022-pwr/sem4-aizo-proj-mg/tree/master/projekt-2)
+# Zadanie projektowe nr 2
 
 ## Temat
 
