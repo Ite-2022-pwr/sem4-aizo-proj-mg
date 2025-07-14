@@ -2,7 +2,7 @@
 
 - Autor: Mateusz Głuchowski
 
-# Zadanie projektowe nr 1
+# [Zadanie projektowe nr 1](https://github.com/Ite-2022-pwr/sem4-aizo-proj-mg/tree/master/projekt-1)
 
 Należy wybrać i zaimplementować (samodzielnie) określone algorytmu sortowania, a następnie przeprowadzić analizę ich efektywności. Zakładamy, że po sortowaniu elementy powinny być uporządkowane rosnąco. Wskazane jest użycie szblonów (templates), aby łatwo można było wykorzystać zaimplementowane algorytmy do sortowania tablic zawierających elementy różnych typów (int, float).
 
@@ -48,7 +48,7 @@ Należy stworzyć menu, które umożliwi następujące operacje:
   (2 różne wzory tworzące algorytmy o różnych złożonościach) oraz sposób wyboru pivota (skrajny
   lewy, skrajny prawy, środkowy oraz losowy) dla algorytmu szybkiego.
 
-# Zadanie projektowe nr 2
+# [Zadanie projektowe nr 2](https://github.com/Ite-2022-pwr/sem4-aizo-proj-mg/tree/master/projekt-2)
 
 ## Temat
 
