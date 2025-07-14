@@ -17,7 +17,14 @@ impl UserHandler {
     pub fn run(self) {
         if self.menu_run {
             // Menu
-            let mut usermenu: Menu = Menu::new(Vec::new(), Vec::new(), -1, self.benchmark_run);
+            let mut usermenu: Menu = Menu::new(
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                self.benchmark_run,
+            );
             usermenu.run();
         }
     }

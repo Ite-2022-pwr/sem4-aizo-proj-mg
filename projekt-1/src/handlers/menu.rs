@@ -1,12 +1,13 @@
-use std::cmp;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 
-use crate::algorithms::{heap_sort, insert_sort, quick_sort, shell_sort};
-use crate::handlers::files_handler;
-// use crate::utils::benchmark;
-use crate::utils::generator;
+use crate::algorithms::mfp::fulkerson;
+use crate::algorithms::mst::{kruskal, prim};
+
+use crate::algorithms::spf::{bellman, dijkstra};
+use crate::handlers::{self, files_handler};
+use crate::utils::{convert, generator};
 
 use owo_colors::OwoColorize;
 
@@ -14,15 +15,26 @@ use owo_colors::OwoColorize;
 pub struct Menu {
     datai: Vec<i64>,
     dataf: Vec<f64>,
-    datatype: i64, // -1 = None, 0 = f64, 1 = i64
+    datamst: Vec<Vec<i64>>,
+    dataspf: Vec<Vec<i64>>,
+    datamfp: Vec<Vec<i64>>,
     benchmarking: bool,
 }
 impl Menu {
-    pub fn new(datai: Vec<i64>, dataf: Vec<f64>, datatype: i64, benchmarking: bool) -> Menu {
+    pub fn new(
+        datai: Vec<i64>,
+        dataf: Vec<f64>,
+        datamst: Vec<Vec<i64>>,
+        dataspf: Vec<Vec<i64>>,
+        datamfp: Vec<Vec<i64>>,
+        benchmarking: bool,
+    ) -> Menu {
         Menu {
             datai,
             dataf,
-            datatype,
+            datamst,
+            dataspf,
+            datamfp,
             benchmarking,
         }
     }
@@ -31,132 +43,157 @@ impl Menu {
         let mut user_choice: u8;
         loop {
             // Pierwszy poziom menu
-            println!("Menu:\n 1. Wybór typu danych.\n 2. Wczytanie pliku z danymi.\n 3. Wyswietlanie wczytanych danych z pliku.\n 4. Wybor algorytmu sortowania.\n 5. Generowanie danych.\n 6. Zamknij program.");
+            println!("Menu:\n 1. Wczytanie pliku z danymi.\n 2. Wyswietlanie wczytanych danych z pliku.\n 3. Wybór problemu.\n 4. Generowanie danych.\n 5. Zamknij program.");
             self.pretty(String::from("~"));
             user_choice = self.read_user_choice_u8();
 
             match user_choice {
                 1 => {
-                    println!("Typy danych:\n 0. f64\n 1. i64");
-                    self.pretty("wybor-typu-danych".to_string());
-                    self.datatype = self.read_user_choice_i64();
-                    if self.datatype != 0 && self.datatype != 1 {
-                        println!("{}", "[-] Wrong type. Setting to i64.".red());
-                        self.datatype = 1;
+                    // Wybranie wariantu pliku w zaleznosci od problemu
+                    println!(
+                        "Wybor wariantu plikow ze wgledu na problem:\n 1. MFP\n 2. MST\n 3. SPF"
+                    );
+                    self.pretty("wybor-wariantu-ze-wzgledu-na-problem".to_string());
+                    // Wczytanie danych z pliku
+                    let problem_choice: u8 = self.read_user_choice_u8();
+
+                    match problem_choice {
+                        1 => {
+                            // MFP
+
+                            // Wybor pliku z danymi
+                            files_handler::list_files("mfp".to_string());
+                            self.pretty("wybor-pliku".to_string());
+                            let chosen_file = self.read_user_choice_str();
+                            let filepath = Path::new("./data/mfp/").join(chosen_file);
+                            self.datamfp = files_handler::read_data_mpf(&filepath);
+                            // self.datai = files_handler::read_datai(&filepath);
+                        }
+
+                        2 => {
+                            // MST
+
+                            // Wybor pliku z danymi
+                            files_handler::list_files("mst".to_string());
+                            self.pretty("wybor-pliku".to_string());
+                            let chosen_file = self.read_user_choice_str();
+                            let filepath = Path::new("./data/mst/").join(chosen_file);
+                            self.datamst = files_handler::read_data_mst(&filepath);
+                        }
+
+                        3 => {
+                            // SFP - to do
+
+                            // Wybor pliku z danymi
+                            files_handler::list_files("spf".to_string());
+                            self.pretty("wybor-pliku".to_string());
+                            let chosen_file = self.read_user_choice_str();
+                            let filepath = Path::new("./data/spf/").join(chosen_file);
+                            self.dataspf = files_handler::read_data_spf(&filepath);
+                        }
+
+                        _ => {
+                            continue;
+                        }
                     }
                 }
 
                 2 => {
-                    // Wybor pliku z danymi
-                    files_handler::list_files();
-                    self.pretty("wybor-pliku".to_string());
-                    let chosen_file = self.read_user_choice_str();
-                    let filepath = Path::new("./data/").join(chosen_file);
-
-                    // Wczytanie danych z pliku
-                    if files_handler::verify_data_type(&filepath) {
-                        // f64
-                        self.dataf = files_handler::read_dataf(&filepath);
-                        self.datatype = 0;
-                    } else {
-                        // i64
-                        self.datai = files_handler::read_datai(&filepath);
-                        self.datatype = 1;
-                    }
-                }
-
-                3 => {
                     // Wyswietlanie wczytanych danych
-                    if self.datatype == 0 {
-                        println!("Załadowane dane testowe:\n{:?}", self.dataf.clone());
-                    } else if self.datatype == 1 {
-                        println!("Załadowane dane testowe:\n{:?}", self.datai.clone());
+                    if self.dataspf.len() != 0 || self.datamst.len() != 0 || self.datamfp.len() != 0
+                    {
+                        println!("Data MFP");
+                        Menu::printvec(self.datamfp.clone());
+                        println!("Data MST");
+                        Menu::printvec(self.datamst.clone());
+                        println!("Data SPF");
+                        Menu::printvec(self.dataspf.clone());
                     } else {
                         println!("{}", "[-] Brak załadowanych danych!".red());
                     }
                 }
 
-                4 => {
+                3 => {
                     // Sprawdz czy posiada wgrany zestaw danych
-                    if self.datai.len() == 0 && self.dataf.len() == 0 {
+                    if self.datamfp.len() == 0 && self.dataspf.len() == 0 && self.datamst.len() == 0
+                    {
                         println!(
                             "{}",
                             "[-] Błąd: Brak wczytanych danych! Proszę wczytać dane...".red()
                         );
                     } else {
                         // Wybor algorytmu sortowania
-                        println!("Dostępne algorytmy:\n 1. Heap Sort.\n 2. Insert Sort.\n 3. Quick Sort.\n 4. Shell Sort.\n 5. Cofnij");
-                        self.pretty("wybor-algorytmu".to_string());
-                        let alg_choice = self.read_user_choice_u8();
-                        match alg_choice {
+                        println!("Dostępne problemy:\n 1. MFP.\n 2. MST.\n 3. SPF.\n 4. Cofnij");
+                        self.pretty("wybor-problemu".to_string());
+                        let problem_choice: u8 = self.read_user_choice_u8();
+                        match problem_choice {
                             1 => {
-                                println!("{}", "[+] Uruchamianie algorytmu Heap Sort...");
-                                if self.datatype == 0 {
-                                    heap_sort::run(self.dataf.clone(), self.benchmarking);
-                                } else if self.datatype == 1 {
-                                    heap_sort::run(self.datai.clone(), self.benchmarking);
-                                } else {
-                                    println!("{}", "[-] Error: Datatype not chosen!".red());
+                                // MFP - to do
+                                println!(
+                                    "Dostepne algorytmy:\n 1. Algorytm Fulkersona.\n 3. Cofnij."
+                                );
+                                self.pretty("wybor-algorytmu".to_string());
+                                let alg_choice: u8 = self.read_user_choice_u8();
+                                match alg_choice {
+                                    1 => {
+                                        println!("[+] Uruchamianie algorytmu Fulkersona...");
+                                        fulkerson::run(self.datamfp.clone(), 1);
+                                        fulkerson::run(self.datamfp.clone(), 2);
+                                        // kruskal::run(self.datamst.clone());
+                                    }
+
+                                    _ => {
+                                        continue;
+                                    }
                                 }
                             }
 
                             2 => {
-                                println!("{}", "[+] Uruchamianie algorytmu Insert Sort...");
-                                if self.datatype == 0 {
-                                    insert_sort::run(self.dataf.clone(), self.benchmarking);
-                                } else if self.datatype == 1 {
-                                    insert_sort::run(self.datai.clone(), self.benchmarking);
-                                } else {
-                                    println!("{}", "[-] Error: Datatype not chosen!".red());
+                                // MST
+                                println!("Dostepne algorytmy:\n 1. Algorytm Kruskala.\n 2. Algorytm Prima.\n 3. Cofnij.");
+                                self.pretty("wybor-algorytmu".to_string());
+                                let alg_choice: u8 = self.read_user_choice_u8();
+                                match alg_choice {
+                                    1 => {
+                                        println!("[+] Uruchamianie algorytmu Kruskala...");
+                                        kruskal::run(self.datamst.clone(), 1);
+                                        kruskal::run(self.datamst.clone(), 2);
+                                        // kruskal::run(self.datamst.clone());
+                                    }
+
+                                    2 => {
+                                        println!("[+] Uruchamianie algorytmu Prima...");
+                                        prim::run(self.datamst.clone(), 1);
+                                        prim::run(self.datamst.clone(), 2);
+                                    }
+
+                                    _ => {
+                                        continue;
+                                    }
                                 }
                             }
 
                             3 => {
-                                // Wybor pivota
-                                println!("Wybor pivota (podaj wartość pivota):\n Lewy - 0\n Prawy - {}\n Srodek - {}\n Losowy - podanie losowej liczby <= {}", 
-                                    cmp::max(self.dataf.len(), self.datai.len()) - 1,
-                                    cmp::max(self.dataf.len(), self.datai.len())/2 - 1,
-                                    cmp::max(self.dataf.len(), self.datai.len()) - 1,
-                                );
-                                self.pretty("wybor-pivota-quick-sort".to_string());
+                                // SFP - to do
+                                println!("Dostepne algorytmy:\n 1. Algorytm Dijkstry.\n 2. Algorytm Bellmana.\n 3. Cofnij.");
+                                self.pretty("wybor-algorytmu".to_string());
+                                let alg_choice: u8 = self.read_user_choice_u8();
+                                match alg_choice {
+                                    1 => {
+                                        println!("[+] Uruchamianie algorytmu Dijkstry...");
+                                        dijkstra::run(self.dataspf.clone(), 1);
+                                        dijkstra::run(self.dataspf.clone(), 2);
+                                    }
 
-                                let pivot_index = self.read_user_choice_i64();
-                                println!("{}", "[+] uruchamianie algorytmu Quick Sort...");
-                                if self.datatype == 0 {
-                                    quick_sort::run(
-                                        self.dataf.clone(),
-                                        pivot_index.try_into().unwrap(),
-                                        self.benchmarking,
-                                    );
-                                } else if self.datatype == 1 {
-                                    quick_sort::run(
-                                        self.datai.clone(),
-                                        pivot_index.try_into().unwrap(),
-                                        self.benchmarking,
-                                    );
-                                } else {
-                                    println!("{}", "[-] Error: Datatype not chosen!".red());
-                                }
-                            }
+                                    2 => {
+                                        println!("[+] Uruchamianie algorytmu Bellmana...");
+                                        bellman::run(self.dataspf.clone(), 1);
+                                        bellman::run(self.dataspf.clone(), 2);
+                                    }
 
-                            4 => {
-                                // Wczytanie zmiennej
-                                println!("Wybor algorytmu shella:\n 1. Ciąg Marcina Ciury (A102549)\n 2. Ciąg Knuth'a (A003462)");
-                                self.pretty("wybor-algorytmu-shella".to_string());
-
-                                let choice = self.read_user_choice_i64();
-                                if choice > 3 && choice < 1 {
-                                    println!("[-] Out of range...");
-                                    break;
-                                }
-
-                                println!("{}", "[+] Uruchamianie algorytmu Shell Sort...");
-                                if self.datatype == 0 {
-                                    shell_sort::run(self.dataf.clone(), choice, self.benchmarking);
-                                } else if self.datatype == 1 {
-                                    shell_sort::run(self.datai.clone(), choice, self.benchmarking);
-                                } else {
-                                    println!("{}", "[-] Error: Datatype not chosen!".red());
+                                    _ => {
+                                        continue;
+                                    }
                                 }
                             }
                             _ => {
@@ -166,40 +203,47 @@ impl Menu {
                     }
                 }
 
-                5 => {
-                    // Generowanie danych
-                    self.pretty("podaj-rozmiar-tablicy".to_string());
-                    let choice_local = self.read_user_choice_i64();
+                4 => {
+                    // Wybor generowanego grafu
+                    println!("Dostepne algorytmy:\n 1. MST.\n 2. MFP.\n 3. SPF.\n 4. Cofnij.");
+                    self.pretty("wybor-algorytmu".to_string());
 
-                    self.pretty("podaj-nazwe-pliku".to_string());
-                    let filename_tmp = self.read_user_choice_str();
+                    let problem_choice: u8 = self.read_user_choice_u8();
 
-                    self.pretty("posortowana w ilu procentach 0->33%, 1->66%, 2->0%".to_string());
-                    let sort_part: i64 = self.read_user_choice_i64();
+                    match problem_choice {
+                        1 => {
+                            // MST
+                            println!("Proszę o podanie ilości wierzchołków:");
+                            let verticles: i64 = self.read_user_choice_i64();
 
-                    if sort_part != 0 && sort_part != 1 && sort_part != 2 {
-                        println!("{}", "[-] Different from 0, 1 or 2. Wrong value provided.");
-                    } else {
-                        if self.datatype == 0 {
-                            self.dataf = generator::generate_data_f64(
-                                choice_local.try_into().unwrap(),
-                                filename_tmp,
-                            );
-                            self.dataf = generator::sort_percent(
-                                self.dataf.clone(),
-                                sort_part.try_into().unwrap(),
-                            );
-                        } else if self.datatype == 1 {
-                            self.datai = generator::generate_data_i64(
-                                choice_local.try_into().unwrap(),
-                                filename_tmp,
-                            );
-                            self.datai = generator::sort_percent(
-                                self.datai.clone(),
-                                sort_part.try_into().unwrap(),
-                            );
-                        } else {
-                            println!("{}", "[-] Error: Datatype not chosen!".red());
+                            println!("Proszę o podanie gęstości grafu:");
+                            let density: i64 = self.read_user_choice_i64();
+
+                            self.datamst = generator::generate_graph_mst(verticles, density);
+                        }
+
+                        2 => {
+                            println!("Proszę o podanie ilości wierzchołków:");
+                            let verticles: i64 = self.read_user_choice_i64();
+
+                            println!("Proszę o podanie gęstości grafu:");
+                            let density: i64 = self.read_user_choice_i64();
+
+                            self.datamfp = generator::generate_graph_mfp(verticles, density);
+                        }
+
+                        3 => {
+                            println!("Proszę o podanie ilości wierzchołków:");
+                            let verticles: i64 = self.read_user_choice_i64();
+
+                            println!("Proszę o podanie gęstości grafu:");
+                            let density: i64 = self.read_user_choice_i64();
+
+                            self.dataspf = generator::generate_graph_spf(verticles, density);
+                        }
+
+                        _ => {
+                            continue;
                         }
                     }
                 }
@@ -258,5 +302,11 @@ impl Menu {
     fn pretty(&self, s: String) {
         print!("{}{}{}", "projekt-1@aizo: ".green(), s.blue(), "$ ".blue());
         let _ = std::io::stdout().flush();
+    }
+
+    fn printvec(data: Vec<Vec<i64>>) {
+        for i in data {
+            println!("{:?}", i);
+        }
     }
 }
